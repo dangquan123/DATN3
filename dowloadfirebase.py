@@ -14,5 +14,5 @@ bucket = storage.bucket()
 
 # dowload file từ firebase
 bucket = storage.bucket()
-blob = bucket.blob("file/thamdu.csv")
-blob.download_to_filename("thamdu.csv")
+blob = bucket.blob("7.ipg")
+blob.download_to_filename("7.ipg")

@@ -34,7 +34,7 @@ data = {
 
 for key, value in data.items():
     ref.child(key).set(value)
-
+    print(key, value)
 studentInfo = db.reference(f'Students/{1}').get()
 print(studentInfo)
 
