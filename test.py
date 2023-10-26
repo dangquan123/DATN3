@@ -18,3 +18,7 @@ img_bytes = img_encoded.tobytes()
 bucket = storage.bucket()
 blob = bucket.blob("imgg")
 blob.upload_from_string(img_bytes,  content_type='image/jpeg')
+# import cv2
+#
+# img = cv2.imread("./images/1.png")
+# print(img.shape)

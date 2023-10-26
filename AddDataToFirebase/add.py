@@ -1,5 +1,4 @@
 import os.path
-import datetime
 import tkinter as tk
 import cv2
 from PIL import Image, ImageTk
@@ -122,11 +121,12 @@ class App:
         total = 0
         fistTime = '0'
         lastTime = '0'
+        img = cv2.resize(self.most_recent_capture_arr, (216,216))
         self.ref.child(id).set({'name': name, 'total_attendance': total, 'fist_attendance_time': fistTime, 'last_attendance_time': lastTime})
-        cv2.imwrite("../images/" + id + '.jpg', self.most_recent_capture_arr)
+        cv2.imwrite("../images/" + id + '.jpg', img)
 
         # Chuyển đổi hình ảnh thành bytes
-        _, img_encoded = cv2.imencode('.jpg', self.most_recent_capture_arr)
+        _, img_encoded = cv2.imencode('.jpg', img)
         img_bytes = img_encoded.tobytes()
         # gửi hình ảnh lên firebase
         bucket = storage.bucket()

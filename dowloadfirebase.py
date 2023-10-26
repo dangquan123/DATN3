@@ -1,6 +1,8 @@
 from firebase_admin import credentials
 from firebase_admin import storage
 import firebase_admin
+import numpy as np
+import cv2
 
 # kết nối với firebase
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -9,10 +11,7 @@ firebase_admin.initialize_app(cred,{
     'storageBucket':'faceattendacerealtime-23cfc.appspot.com'
 })
 
-# tạo đối tượng để sử dụng kho lưu trữ trên firebase
 bucket = storage.bucket()
-
-# dowload file từ firebase
-bucket = storage.bucket()
-blob = bucket.blob("7.ipg")
-blob.download_to_filename("7.ipg")
+fileName = '(09h53m 26-10-2023).csv'
+blobs = bucket.blob(f'file/{fileName}')
+blobs.download_to_filename("dowloadFile/" + fileName)
