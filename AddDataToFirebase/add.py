@@ -7,6 +7,7 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import storage
 from firebase_admin import db
+import face_recognition
 
 cred = credentials.Certificate("serviceAccountKey.json")
 firebase_admin.initialize_app(cred,{
@@ -122,17 +123,22 @@ class App:
         fistTime = '0'
         lastTime = '0'
         img = cv2.resize(self.most_recent_capture_arr, (216,216))
-        self.ref.child(id).set({'name': name, 'total_attendance': total, 'fist_attendance_time': fistTime, 'last_attendance_time': lastTime})
-        cv2.imwrite("../images/" + id + '.jpg', img)
+        encode = face_recognition.face_encodings(img)
+        if encode:
+            self.ref.child(id).set({'name': name, 'total_attendance': total, 'fist_attendance_time': fistTime, 'last_attendance_time': lastTime})
+            cv2.imwrite("../images/" + id + '.jpg', img)
 
-        # Chuyển đổi hình ảnh thành bytes
-        _, img_encoded = cv2.imencode('.jpg', img)
-        img_bytes = img_encoded.tobytes()
-        # gửi hình ảnh lên firebase
-        bucket = storage.bucket()
-        blob = bucket.blob("database/{}.jpg".format(id))
-        blob.upload_from_string(img_bytes, content_type='image/jpeg')
+            # Chuyển đổi hình ảnh thành bytes
+            _, img_encoded = cv2.imencode('.jpg', img)
+            img_bytes = img_encoded.tobytes()
 
+            # gửi hình ảnh lên firebase
+            bucket = storage.bucket()
+            blob = bucket.blob("database/{}.jpg".format(id))
+            blob.upload_from_string(img_bytes, content_type='image/jpeg')
+
+        else:
+            util.msg_box("cảnh báo", "chưa nhận diện được khuôn mặt")
         self.register_new_user_window.destroy()
 
 if __name__ == "__main__":

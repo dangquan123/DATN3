@@ -42,7 +42,7 @@ for blob in blobs:
 
 for file_name in file_names:
 
-    file_name = file_name.split("/")[1]
+    file_name = file_name.split("/")[-1]
     studentIds.append(file_name.split(".")[0])
     file_names_output.append(file_name)
 
@@ -50,8 +50,12 @@ for file_name in file_names:
     array = np.frombuffer(blob.download_as_string(), np.uint8)
     imgStudent = cv2.imdecode(array, cv2.COLOR_BGRA2BGR)
     imgStudent = cv2.cvtColor(imgStudent, cv2.COLOR_BGR2RGB)
-    encode = face_recognition.face_encodings(imgStudent)[0]
-    encodeList.append(encode)
+    encode = face_recognition.face_encodings(imgStudent)
+
+    if encode:
+        encodeList.append(encode[0])
+    else:
+        print("không tìm thấy khuôn mặt nào để mã hóa")
 
 print("Encoding Started ...")
 encodeListKnown = encodeList
