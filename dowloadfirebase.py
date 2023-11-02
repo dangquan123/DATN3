@@ -12,6 +12,8 @@ firebase_admin.initialize_app(cred,{
 })
 
 bucket = storage.bucket()
-fileName = '(12h45m 26-10-2023).csv'
+fileName = '(10h50m 27-10-2023).csv'
 blobs = bucket.blob(f'file/{fileName}')
 blobs.download_to_filename("dowloadFile/" + fileName)
+
+print("Dowload thành công! ")
