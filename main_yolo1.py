@@ -42,13 +42,13 @@ print("đã lấy dữ liệu mã hóa xong")
 model = YOLO("best.pt")
 classNames = ["fake", "real"]
 
-tendanhsachP = "danhsach.txt"
-danhsach = f"./danhsach/{tendanhsachP}"
 flag_diemdanh = 0
+idClears = []
 
 # hàm thêm vào file excel
 def join(id):
     #lấy danh sách
+    danhsach = f"./danhsach/{tendanhsach}"
     listClass = []
     with open(danhsach, "r") as f:
         for line in f.readlines():
@@ -99,7 +99,8 @@ while True:
     ref_lichhoc = db.reference(f'lap lich/{current_daytime}')
     get = ref_lichhoc.get()
 
-    current_time = float(datetime.now().strftime("%H.%M"))
+    typeTime = ["%H", "%M", "%S", "%H.%M"]
+    current_time = float(datetime.now().strftime(typeTime[2]))
     print("hôm nay là:" + current_daytime + " thời gian: " + str(current_time))
 
     for gio, tendanhsach in get.items():
@@ -112,8 +113,8 @@ while True:
 
         if (gio_bat_dau < current_time < gio_ket_thuc):
             # tạo file điểm danh
-            tendanhsach = tendanhsach.split('.')[0]
-            outputFile = f"./outputCSV/{tendanhsach}"
+            tendanhsachOut = tendanhsach.split('.')[0]
+            outputFile = f"./outputCSV/{tendanhsachOut}"
             extension = datetime.now()
             extension = extension.strftime('(%Hh%Mm %d-%m-%Y)')
             with open(outputFile + extension + ".csv", "a") as f:
@@ -124,7 +125,6 @@ while True:
 
             flag_diemdanh = 1
             success, img = cap.read()
-            tendanhsachP = tendanhsach
 
             # nhận dạng real fake
             faceCurFrame1 = face_recognition.face_locations(img)
@@ -174,6 +174,7 @@ while True:
 
                 if valueMatchIndex < 0.48:
                     id = studentIds[matchIndex]
+                    idClears.append(id)
                     # lấy dữ liệu từ database về
                     studentInfo = db.reference(f'Students/{id}').get()
 
@@ -190,7 +191,7 @@ while True:
                 cv2.putText(img, id, (x2, y2), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 1)
 
             # cập nhật biến dừng vòng lặp
-            current_time = float(datetime.now().strftime("%H.%M"))
+            current_time = float(datetime.now().strftime(typeTime[2]))
             cv2.imshow("DATN", img)
             cv2.waitKey(1)
 
@@ -200,12 +201,9 @@ while True:
             blob = bucket.blob("file/" + extension + ".csv")
             blob.upload_from_filename(fileNames)
 
-            with open(danhsach, "r") as f:
-                for line in f.readlines():
-                    line = line[0:-1]
-                    line.strip()
-                    refclear = db.reference(f'Students/{line}')
-                    refclear.child("total_attendance").set(0)
+            for idClear in idClears:
+                refclear = db.reference(f'Students/{idClear}')
+                refclear.child("total_attendance").set(0)
 
         print(f"ket thuc tiet: {gio}")
 cv2.destroyAllWindows()

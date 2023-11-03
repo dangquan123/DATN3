@@ -20,12 +20,6 @@ class App:
         self.ref = db.reference('Students')
         self.main_window = tk.Tk()
         self.main_window.geometry("1200x520+50+100")
-        #
-        # self.login_button_main_window = util.get_button(self.main_window, 'login', 'green', self.login)
-        # self.login_button_main_window.place(x=750, y=200)
-        #
-        # self.logout_button_main_window = util.get_button(self.main_window, 'logout', 'red', self.logout)
-        # self.logout_button_main_window.place(x=750, y=300)
 
         self.register_new_user_button_main_window = util.get_button(self.main_window, 'GET DATA', 'green',
                                                                     self.register_new_user, fg='white')
@@ -35,12 +29,6 @@ class App:
         self.webcam_label.place(x=10, y=0, width=700, height=500)
 
         self.add_webcam(self.webcam_label)
-
-        self.db_dir = './db'
-        if not os.path.exists(self.db_dir):
-            os.mkdir(self.db_dir)
-
-        self.log_path = './log.txt'
 
     def add_webcam(self, label):
         if 'cap' not in self.__dict__:
@@ -86,23 +74,6 @@ class App:
         self.name_label = util.get_text_label(self.register_new_user_window, 'Name: ')
         self.name_label.place(x=730, y=170)
 
-        # self.total_attendance = util.get_entry_text(self.register_new_user_window)
-        # self.total_attendance.place(x=870, y=140)
-
-        # self.total_attendance_label = util.get_text_label(self.register_new_user_window, 'Total: ')
-        # self.total_attendance_label.place(x=730, y=140)
-        #
-        # self.fist_attendance_time = util.get_entry_text(self.register_new_user_window)
-        # self.fist_attendance_time .place(x=870, y=190)
-        #
-        # self.fist_attendance_time_label  = util.get_text_label(self.register_new_user_window, 'fistTime: ')
-        # self.fist_attendance_time_label.place(x=730, y=190)
-        #
-        # self.last_attendance_time = util.get_entry_text(self.register_new_user_window)
-        # self.last_attendance_time.place(x=870, y=240)
-        #
-        # self.last_attendance_time_label = util.get_text_label(self.register_new_user_window, 'lastTime: ')
-        # self.last_attendance_time_label.place(x=730, y=240)
     def try_again_register_new_user(self):
         self.register_new_user_window.destroy()
 
@@ -122,7 +93,8 @@ class App:
         total = 0
         fistTime = '0'
         lastTime = '0'
-        img = cv2.resize(self.most_recent_capture_arr, (216,216))
+        # img = cv2.resize(self.most_recent_capture_arr, (216,216))
+        img = self.most_recent_capture_arr
         encode = face_recognition.face_encodings(img)
         if encode:
             self.ref.child(id).set({'name': name, 'total_attendance': total, 'fist_attendance_time': fistTime, 'last_attendance_time': lastTime})
