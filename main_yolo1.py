@@ -35,7 +35,6 @@ file = open('EncodeFile.p', 'rb')
 encodeListKnownWithIds = pickle.load(file)
 file.close()
 encodeListKnown, studentIds = encodeListKnownWithIds
-# print(studentIds)
 print("đã lấy dữ liệu mã hóa xong")
 
 # tạo đối tượng phân biệt real fake
@@ -116,7 +115,7 @@ while True:
             tendanhsachOut = tendanhsach.split('.')[0]
             outputFile = f"./outputCSV/{tendanhsachOut}"
             extension = datetime.now()
-            extension = extension.strftime('(%Hh%Mm %d-%m-%Y)')
+            extension = f"({gio})" + extension.strftime('(%d-%m-%Y)')
             with open(outputFile + extension + ".csv", "a") as f:
                 f.write("")
             fileNames = outputFile + extension + ".csv"
@@ -198,7 +197,7 @@ while True:
         if flag_diemdanh:
             flag_diemdanh = 0
             bucket = storage.bucket()
-            blob = bucket.blob("file/" + extension + ".csv")
+            blob = bucket.blob("file/" + tendanhsachOut + extension + ".csv")
             blob.upload_from_filename(fileNames)
 
             for idClear in idClears:
