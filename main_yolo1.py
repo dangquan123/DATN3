@@ -11,7 +11,7 @@ from datetime import datetime
 from ultralytics import YOLO
 import math
 
-# sác xuất
+# ngưỡng sác xuất nhận dạng, phát hiện ảnh giả
 confidence = 0.6
 
 # kết nối với firebase
@@ -43,6 +43,8 @@ classNames = ["fake", "real"]
 
 flag_diemdanh = 0
 idClears = []
+idCheck = []
+totalCheck = []
 
 # hàm thêm vào file excel
 def join(id):
@@ -89,6 +91,52 @@ def join(id):
                             f.writelines(lines)
     else:
         print(f"{id} không có trong danh sách\n")
+def check_total(file_name_check):
+
+    idCheck = []
+    totalCheck = []
+    selected_numbers = []
+    index_id = []
+    value_idCheck_suspicion = []
+    total_difference = []
+
+    with open(file_name_check, "r") as f:
+        for i in f.readlines():
+            list_line = i.split(",")
+            idCheck.append(int(list_line[0].strip()))
+            totalCheck.append(int((list_line[1]).strip()))
+    if len(idCheck) < 2:
+        return
+    numbers = list(totalCheck)
+    numbers.sort()
+    min_difference = 0
+
+    for i in range(len(numbers) - 1):
+        current_difference = numbers[i + 1] - numbers[i]
+        total_difference.append(current_difference)
+        if current_difference > min_difference:
+            tong = sum(total_difference)
+            trung_binh = tong / len(total_difference)
+            if current_difference > trung_binh + 50:
+                min_difference = current_difference
+                selected_numbers = numbers[i]
+
+    if not selected_numbers:
+        return
+    index_value = numbers.index(selected_numbers)
+    for i in range(index_value + 1):
+         for index, value in enumerate(totalCheck):
+             if value == numbers[i]:
+                 if index not in index_id:
+                    index_id.append(index)
+
+    idCheck_suspicion = index_id
+    for i in idCheck_suspicion:
+        value_idCheck_suspicion.append(idCheck[i])
+
+    value = [value_idCheck_suspicion, idCheck]
+    return (value)
+
 
 while True:
 
@@ -199,6 +247,13 @@ while True:
             bucket = storage.bucket()
             blob = bucket.blob("file/" + tendanhsachOut + extension + ".csv")
             blob.upload_from_filename(fileNames)
+
+
+            id_suspicion = check_total(outputFile + extension + ".csv")
+            if id_suspicion:
+                if len(id_suspicion[1]) > 2 :
+                    with open(outputFile + extension + ".csv", 'a') as f:
+                        f.write("     id nghi ngo: " + str(id_suspicion[0]))
 
             for idClear in idClears:
                 refclear = db.reference(f'Students/{idClear}')
