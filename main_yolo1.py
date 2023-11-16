@@ -13,6 +13,11 @@ import math
 
 # ngưỡng sác xuất nhận dạng, phát hiện ảnh giả
 confidence = 0.6
+soSanhLayAnh = 0.47
+flag_diemdanh = 0
+idClears = []
+idCheck = []
+totalCheck = []
 
 # kết nối với firebase
 cred = credentials.Certificate("serviceAccountKey.json")
@@ -41,16 +46,15 @@ print("đã lấy dữ liệu mã hóa xong")
 model = YOLO("best.pt")
 classNames = ["fake", "real"]
 
-flag_diemdanh = 0
-idClears = []
-idCheck = []
-totalCheck = []
-
 # hàm thêm vào file excel
 def join(id):
-    #lấy danh sách
+
     danhsach = f"./danhsach/{tendanhsach}"
     listClass = []
+    list_id = []
+    lines = []
+
+    #lấy danh sách để điểm danh những học sinh có trong danh sách, còn không có thì không điểm danh
     with open(danhsach, "r") as f:
         for line in f.readlines():
             line = line[0:-1]
@@ -71,26 +75,27 @@ def join(id):
             lastTime = datetime.now()
             lastTime = lastTime.strftime('%H:%M:%S %d/%m/%Y')
             ref.child('last_attendance_time').set(lastTime)
-        print(f'{id}, {studentInfo["total_attendance"]}, {studentInfo["fist_attendance_time"]},{studentInfo["last_attendance_time"]}\n')
-        list_line = []
-        lines = []
 
+        print(f'{id}, {studentInfo["total_attendance"]}, {studentInfo["fist_attendance_time"]},{studentInfo["last_attendance_time"]}\n')
+
+        # thêm vào file excel
         with open(fileNames, 'r+') as file:
             for j in file.readlines():
                 lines.append(j)
                 entry = j.split(',')
-                list_line.append(entry[0])
-
-            if id not in list_line:
+                list_id.append(entry[0])
+            #nếu id không có trong danh sách thì thêm vào, có thì thay thế bằng dữ liệu mới
+            if id not in list_id:
                 file.writelines(f'{id}, {studentInfo["total_attendance"]}, {studentInfo["fist_attendance_time"]},{studentInfo["last_attendance_time"]}')
             else:
-                for i, line in enumerate(list_line):
+                for i, line in enumerate(list_id):
                     if id == line:
                         with open(fileNames, 'w') as f:
                             lines[i] = f'{id}, {studentInfo["total_attendance"]}, {studentInfo["fist_attendance_time"]}, {studentInfo["last_attendance_time"]}\n'
                             f.writelines(lines)
     else:
         print(f"{id} không có trong danh sách\n")
+# kiểm tra những id dị biệt
 def check_total(file_name_check):
 
     idCheck = []
@@ -105,8 +110,10 @@ def check_total(file_name_check):
             list_line = i.split(",")
             idCheck.append(int(list_line[0].strip()))
             totalCheck.append(int((list_line[1]).strip()))
+    # 3 người trở lên mới check
     if len(idCheck) < 2:
         return
+
     numbers = list(totalCheck)
     numbers.sort()
     min_difference = 0
@@ -123,6 +130,7 @@ def check_total(file_name_check):
 
     if not selected_numbers:
         return
+
     index_value = numbers.index(selected_numbers)
     for i in range(index_value + 1):
          for index, value in enumerate(totalCheck):
@@ -148,7 +156,7 @@ while True:
 
     typeTime = ["%H", "%M", "%S", "%H.%M"]
     current_time = float(datetime.now().strftime(typeTime[2]))
-    print("hôm nay là:" + current_daytime + " thời gian: " + str(current_time))
+    print("hôm nay là: " + current_daytime + "----- thời gian: " + str(current_time))
 
     for gio, tendanhsach in get.items():
         try:
@@ -208,25 +216,20 @@ while True:
 
             # so sánh khuông mặt trên camera dữ liệu mã hóa trước đó, vẽ đường bao xung quanh khuôn mặt
             for encodeFace, faceLoc in zip(encodeCurFrame, faceCurFrame):
-                # biến matchs trả về danh sách true hoặc fales
                 matches = face_recognition.compare_faces(encodeListKnown, encodeFace)
-                # danh sách giá trị độ chênh lệch của từng khuôn mặt
                 faceDis = face_recognition.face_distance(encodeListKnown, encodeFace)
                 print("giá trị so sánh: " + str(faceDis))
-                # vị trí gương mặt có khả năng tương thích nhất trong kho dữ liệu
                 matchIndex = np.argmin(faceDis)
-                # giả trị tương thích tại vị trí đó
                 valueMatchIndex = np.amin(faceDis)
                 print(f"id ({matchIndex}) có sai số nhỏ nhất: {round(valueMatchIndex,2)}")
 
-                if valueMatchIndex < 0.48:
+                if valueMatchIndex < soSanhLayAnh:
                     id = studentIds[matchIndex]
                     idClears.append(id)
                     # lấy dữ liệu từ database về
                     studentInfo = db.reference(f'Students/{id}').get()
 
                     join(id)
-
                 else:
                     id = "unknow"
 
@@ -239,27 +242,51 @@ while True:
 
             # cập nhật biến dừng vòng lặp
             current_time = float(datetime.now().strftime(typeTime[2]))
+
             cv2.imshow("DATN", img)
             cv2.waitKey(1)
 
         if flag_diemdanh:
             flag_diemdanh = 0
+            # gửi file điểm danh lên file base
             bucket = storage.bucket()
             blob = bucket.blob("file/" + tendanhsachOut + extension + ".csv")
             blob.upload_from_filename(fileNames)
 
-
+            # kiểm tra những id dị biệt, và cài đặt total_attention trong buổi điểm danh về 0
             id_suspicion = check_total(outputFile + extension + ".csv")
+            idTrongDanhSach = []
+            idDuocDiemDanh = []
+            idKhongCoMat = []
+            with open(outputFile + extension + ".csv", 'r') as f:
+                for line in f.readlines():
+                    line = line.replace("\n", "")
+                    line.split(",")
+                    line.strip()
+                    idDuocDiemDanh.append(line[0])
+
+            with open(f"danhsach/DATN.txt", 'r') as f:
+                for line in f.readlines():
+                    line = line.replace("\n", "")
+                    line.strip()
+                    idTrongDanhSach.append(line)
+
+            for i in idTrongDanhSach:
+                if i not in idDuocDiemDanh:
+                    idKhongCoMat.append(i)
             if id_suspicion:
                 if len(id_suspicion[1]) > 2 :
                     with open(outputFile + extension + ".csv", 'a') as f:
-                        f.write("     id nghi ngo: " + str(id_suspicion[0]))
+                        f.write(",----------id_nghi_ngo---: " + str(id_suspicion[0]))
+
+            with open(outputFile + extension + ".csv", 'a') as f:
+                f.write(",----khong co mat---: " + str(idKhongCoMat))
 
             for idClear in idClears:
                 refclear = db.reference(f'Students/{idClear}')
                 refclear.child("total_attendance").set(0)
 
-        print(f"ket thuc tiet: {gio}")
+        print(f"----------DONE-------------- {gio}")
 cv2.destroyAllWindows()
 
 
