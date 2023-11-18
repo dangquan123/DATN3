@@ -1,4 +1,6 @@
 import pickle
+import time
+
 import cv2
 import face_recognition
 import cvzone
@@ -121,6 +123,9 @@ def check_total(file_name_check):
     for i in range(len(numbers) - 1):
         current_difference = numbers[i + 1] - numbers[i]
         total_difference.append(current_difference)
+
+    for i in range(len(numbers) - 1):
+        current_difference = numbers[i + 1] - numbers[i]
         if current_difference > min_difference:
             tong = sum(total_difference)
             trung_binh = tong / len(total_difference)
@@ -143,7 +148,7 @@ def check_total(file_name_check):
         value_idCheck_suspicion.append(idCheck[i])
 
     value = [value_idCheck_suspicion, idCheck]
-    return (value)
+    return(value)
 
 
 while True:
@@ -156,7 +161,7 @@ while True:
 
     typeTime = ["%H", "%M", "%S", "%H.%M"]
     current_time = float(datetime.now().strftime(typeTime[2]))
-    print("hôm nay là: " + current_daytime + "----- thời gian: " + str(current_time))
+    print(f"hôm nay là: {current_daytime}----real time: {current_time}")
 
     for gio, tendanhsach in get.items():
         try:
@@ -242,9 +247,9 @@ while True:
 
             # cập nhật biến dừng vòng lặp
             current_time = float(datetime.now().strftime(typeTime[2]))
-
             cv2.imshow("DATN", img)
             cv2.waitKey(1)
+
 
         if flag_diemdanh:
             flag_diemdanh = 0
@@ -274,19 +279,26 @@ while True:
             for i in idTrongDanhSach:
                 if i not in idDuocDiemDanh:
                     idKhongCoMat.append(i)
+            print("\n\n\n------KẾT QUẢ-----\nkết quả điểm danh: [id, tổng số lần điểm danh, giờ vào, giờ ra]")
+            with open(outputFile + extension + ".csv", "r") as f:
+                for i in f.readlines():
+                    print(i, end='')
+            print(f"\n\nid có trong danh sách: {idTrongDanhSach}")
+            print(f"id nghi ngờ thiếu giờ học: {id_suspicion[0]}\nid vắng: {idKhongCoMat}")
+
             if id_suspicion:
                 if len(id_suspicion[1]) > 2 :
                     with open(outputFile + extension + ".csv", 'a') as f:
-                        f.write(",----------id_nghi_ngo---: " + str(id_suspicion[0]))
+                        f.write("---id_nghi_ngo---: " + str(id_suspicion[0]))
 
             with open(outputFile + extension + ".csv", 'a') as f:
-                f.write(",----khong co mat---: " + str(idKhongCoMat))
+                f.write("---khong co mat---: " + str(idKhongCoMat))
 
             for idClear in idClears:
                 refclear = db.reference(f'Students/{idClear}')
                 refclear.child("total_attendance").set(0)
 
-        print(f"----------DONE-------------- {gio}")
+            print(f"\n----DONE---- {gio}\n\n\n\n")
 cv2.destroyAllWindows()
 
 
