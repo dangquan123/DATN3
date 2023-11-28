@@ -1,5 +1,3 @@
-import pickle
-import time
 
 import cv2
 import face_recognition
@@ -37,19 +35,21 @@ cap.set(1, 1280)
 cap.set(2, 720)
 
 # lấy dữ liệu đã mã hóa từ file
-print("đang lấy dữ liệu mã hóa ...")
-file = open('EncodeFile.p', 'rb')
-encodeListKnownWithIds = pickle.load(file)
-file.close()
-encodeListKnown, studentIds = encodeListKnownWithIds
-print("đã lấy dữ liệu mã hóa xong")
+
+# print("đang lấy dữ liệu mã hóa ...")
+# file = open('EncodeFile.p', 'rb')
+# encodeListKnownWithIds = pickle.load(file)
+# file.close()
+# encodeListKnown, studentIds = encodeListKnownWithIds
+# print("đã lấy dữ liệu mã hóa xong")
+
 
 # tạo đối tượng phân biệt real fake
 model = YOLO("best.pt")
 classNames = ["fake", "real"]
 
 # hàm thêm vào file excel
-def join(id):
+def join(id, tendanhsach):
 
     danhsach = f"./danhsach/{tendanhsach}"
     listClass = []
@@ -112,7 +112,7 @@ def check_total(file_name_check):
             list_line = i.split(",")
             idCheck.append(int(list_line[0].strip()))
             totalCheck.append(int((list_line[1]).strip()))
-    # 3 người trở lên mới check
+    # 4 người trở lên mới check
     if len(idCheck) < 2:
         return
 
@@ -164,6 +164,7 @@ while True:
     print(f"hôm nay là: {current_daytime}----real time: {current_time}")
 
     for gio, tendanhsach in get.items():
+
         try:
             gio = gio.split("-")
             gio_bat_dau = float(gio[0].replace(",", "."))
@@ -172,6 +173,49 @@ while True:
             print(f"loi xay ra {e}")
 
         if (gio_bat_dau < current_time < gio_ket_thuc):
+
+            # mã hóa các khuôn mặt có trong danh sách từ firebase
+            idTrongDanhSach = []
+            with open(f"danhsach/{tendanhsach}", 'r') as f:
+                for line in f.readlines():
+                    line = line.replace("\n", "")
+                    line.strip()
+                    idTrongDanhSach.append(line)
+
+            imgList = []
+            studentIds = []
+            encodeList = []
+            file_names = []
+            file_names_output = []
+
+            bucket = storage.bucket()
+            blobs = bucket.list_blobs(prefix="database/")
+            for blob in blobs:
+                file_names.append(blob.name)
+
+            print("\n\nbắt đầu mã hóa ...")
+            for file_name in file_names:
+
+                file_name = file_name.split("/")[-1]
+                id = file_name.split(".")[0]
+                if id in idTrongDanhSach:
+                    studentIds.append(file_name.split(".")[0])
+                    file_names_output.append(file_name)
+
+                    blob = bucket.get_blob(f'database/{file_name}')
+                    array = np.frombuffer(blob.download_as_string(), np.uint8)
+                    imgStudent = cv2.imdecode(array, cv2.COLOR_BGRA2BGR)
+                    imgStudent = cv2.cvtColor(imgStudent, cv2.COLOR_BGR2RGB)
+                    encode = face_recognition.face_encodings(imgStudent)
+                    if encode:
+                        encodeList.append(encode[0])
+                    else:
+                        print("không tìm thấy khuôn mặt nào để mã hóa")
+
+            encodeListKnown = encodeList
+            print(f"id đã được mã hóa{studentIds}")
+            print("mã hóa xong\n")
+
             # tạo file điểm danh
             tendanhsachOut = tendanhsach.split('.')[0]
             outputFile = f"./outputCSV/{tendanhsachOut}"
@@ -234,15 +278,19 @@ while True:
                     # lấy dữ liệu từ database về
                     studentInfo = db.reference(f'Students/{id}').get()
 
-                    join(id)
+                    join(id, tendanhsach)
                 else:
                     id = "unknow"
 
                 #vẽ đường bao khuôn mặt
+                if id != "unknow":
+                    color_box = (20, 250,40 )
+                else:
+                    color_box = (0, 0, 255)
                 y1, x2, y2, x1 = faceLoc
                 y1, x2, y2, x1 = y1 * 4, x2 * 4, y2 * 4, x1 * 4
                 bbox = x1, y1, x2 - x1, y2 - y1
-                imgBackGround = cvzone.cornerRect(img, bbox, rt=0)
+                imgBackGround = cvzone.cornerRect(img, bbox, rt=0, colorR=color_box)
                 cv2.putText(img, id, (x2, y2), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 1)
 
             # cập nhật biến dừng vòng lặp
@@ -253,14 +301,9 @@ while True:
 
         if flag_diemdanh:
             flag_diemdanh = 0
-            # gửi file điểm danh lên file base
-            bucket = storage.bucket()
-            blob = bucket.blob("file/" + tendanhsachOut + extension + ".csv")
-            blob.upload_from_filename(fileNames)
 
             # kiểm tra những id dị biệt, và cài đặt total_attention trong buổi điểm danh về 0
             id_suspicion = check_total(outputFile + extension + ".csv")
-            idTrongDanhSach = []
             idDuocDiemDanh = []
             idKhongCoMat = []
             with open(outputFile + extension + ".csv", 'r') as f:
@@ -270,35 +313,36 @@ while True:
                     line.strip()
                     idDuocDiemDanh.append(line[0])
 
-            with open(f"danhsach/DATN.txt", 'r') as f:
-                for line in f.readlines():
-                    line = line.replace("\n", "")
-                    line.strip()
-                    idTrongDanhSach.append(line)
-
             for i in idTrongDanhSach:
                 if i not in idDuocDiemDanh:
                     idKhongCoMat.append(i)
+
             print("\n\n\n------KẾT QUẢ-----\nkết quả điểm danh: [id, tổng số lần điểm danh, giờ vào, giờ ra]")
             with open(outputFile + extension + ".csv", "r") as f:
                 for i in f.readlines():
                     print(i, end='')
             print(f"\n\nid có trong danh sách: {idTrongDanhSach}")
-            print(f"id nghi ngờ thiếu giờ học: {id_suspicion[0]}\nid vắng: {idKhongCoMat}")
+            print(f"id vắng: {idKhongCoMat}")
 
             if id_suspicion:
                 if len(id_suspicion[1]) > 2 :
+                    print(f"id nghi ngờ thiếu giờ học: {id_suspicion[0]}\n")
                     with open(outputFile + extension + ".csv", 'a') as f:
-                        f.write("---id_nghi_ngo---: " + str(id_suspicion[0]))
+                        f.write("\n\nid_nghi_ngo," + str(id_suspicion[0]).strip('[]'))
 
             with open(outputFile + extension + ".csv", 'a') as f:
-                f.write("---khong co mat---: " + str(idKhongCoMat))
+                f.write("\nkhong co mat," + str(idKhongCoMat).strip('[]').replace("'",""))
+
+            # gửi file điểm danh lên file base
+            bucket = storage.bucket()
+            blob = bucket.blob("file/" + tendanhsachOut + extension + ".csv")
+            blob.upload_from_filename(fileNames)
 
             for idClear in idClears:
                 refclear = db.reference(f'Students/{idClear}')
                 refclear.child("total_attendance").set(0)
 
-            print(f"\n----DONE---- {gio}\n\n\n\n")
+            print(f"----DONE---- {gio}\n\n\n\n")
 cv2.destroyAllWindows()
 
 
