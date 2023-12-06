@@ -13,6 +13,7 @@ import math
 
 # ngưỡng sác xuất nhận dạng, phát hiện ảnh giả
 confidence = 0.6
+
 soSanhLayAnh = 0.47
 flag_diemdanh = 0
 idClears = []
@@ -160,23 +161,28 @@ while True:
     get = ref_lichhoc.get()
 
     typeTime = ["%H", "%M", "%S", "%H.%M"]
-    current_time = float(datetime.now().strftime(typeTime[2]))
+    # current_time = float(datetime.now().strftime(typeTime[1]))
+    current_time = float(datetime.now().strftime(f"{typeTime[0]}.{typeTime[1]}"))
     print(f"hôm nay là: {current_daytime}----real time: {current_time}")
 
     for gio, tendanhsach in get.items():
 
         try:
             gio = gio.split("-")
-            gio_bat_dau = float(gio[0].replace(",", "."))
-            gio_ket_thuc = float(gio[1].replace(",","."))
+            gio_bat_dau = round(float(gio[0].replace(",", ".")), 2)
+            gio_ket_thuc = round(float(gio[1].replace(",",".")), 2)
         except Exception as e:
             print(f"loi xay ra {e}")
-
+        print(f"gio bat dau{gio_bat_dau}, gio ket thuc {gio_ket_thuc}")
         if (gio_bat_dau < current_time < gio_ket_thuc):
+
+            blobs = bucket.blob(f'danhsach/{tendanhsach}')
+            blobs.download_to_filename("danhsach1/" + tendanhsach)
+            print("Dowload thành công! ")
 
             # mã hóa các khuôn mặt có trong danh sách từ firebase
             idTrongDanhSach = []
-            with open(f"danhsach/{tendanhsach}", 'r') as f:
+            with open(f"danhsach1/{tendanhsach}", 'r') as f:
                 for line in f.readlines():
                     line = line.replace("\n", "")
                     line.strip()
@@ -250,7 +256,7 @@ while True:
                         # sác xuất
                         conf = math.ceil((box.conf[0] * 100)) / 100
                         cls = int(box.cls[0])
-
+                        print(f"real/fake = {cls}")
                         # if conf > confidence:
                         if classNames[cls] == 'fake':
                             # phủ trắng các gương mặt fake
@@ -294,7 +300,8 @@ while True:
                 cv2.putText(img, id, (x2, y2), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 0, 0), 1)
 
             # cập nhật biến dừng vòng lặp
-            current_time = float(datetime.now().strftime(typeTime[2]))
+            # current_time = float(datetime.now().strftime(typeTime[2]))
+            current_time = float(datetime.now().strftime(f"{typeTime[0]}.{typeTime[1]}"))
             cv2.imshow("DATN", img)
             cv2.waitKey(1)
 
@@ -316,7 +323,7 @@ while True:
             for i in idTrongDanhSach:
                 if i not in idDuocDiemDanh:
                     idKhongCoMat.append(i)
-
+            title = []
             print("\n\n\n------KẾT QUẢ-----\nkết quả điểm danh: [id, tổng số lần điểm danh, giờ vào, giờ ra]")
             with open(outputFile + extension + ".csv", "r") as f:
                 for i in f.readlines():
@@ -324,15 +331,34 @@ while True:
             print(f"\n\nid có trong danh sách: {idTrongDanhSach}")
             print(f"id vắng: {idKhongCoMat}")
 
+            # with open(outputFile + extension + ".csv", 'a') as f:
+            #     f.write("\nkhong co mat," + str(idKhongCoMat).strip('[]').replace("'",""))
+
+            # thêm title cho file output
+            with open(outputFile + extension + ".csv", "r") as f:
+                title = f.readlines()
+            for i,titleline in enumerate(title):
+                new = titleline.strip('\n') + ', co\n'
+                title[i] = new
+
+            title.insert(0,"ID,TONG SO DIEM DANH,THOI GIAN BAT DAU,THOI GIAN KET THUC,KET QUA\n")
+
+            for i in idKhongCoMat:
+                title.append(f"{i},,,, vang\n")
+
+            with open(outputFile + extension + ".csv", "w") as f:
+                f.writelines(title)
+
             if id_suspicion:
                 if len(id_suspicion[1]) > 2 :
-                    print(f"id nghi ngờ thiếu giờ học: {id_suspicion[0]}\n")
-                    with open(outputFile + extension + ".csv", 'a') as f:
-                        f.write("\n\nid_nghi_ngo," + str(id_suspicion[0]).strip('[]'))
-
-            with open(outputFile + extension + ".csv", 'a') as f:
-                f.write("\nkhong co mat," + str(idKhongCoMat).strip('[]').replace("'",""))
-
+                    for i, line in enumerate(title):
+                       for j in id_suspicion[0]:
+                           if line[0] == str(j):
+                                title[i] = title[i].replace("co", "thieu gio hoc")
+                    with open(outputFile + extension + ".csv", "w") as f:
+                        f.writelines(title)
+                    # with open(outputFile + extension + ".csv", 'a') as f:
+                    #     f.write("\n\nid_nghi_ngo," + str(id_suspicion[0]).strip('[]'))
             # gửi file điểm danh lên file base
             bucket = storage.bucket()
             blob = bucket.blob("file/" + tendanhsachOut + extension + ".csv")

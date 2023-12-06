@@ -1,18 +1,10 @@
-import matplotlib.pyplot as plt
+# with open("outputCSV/DATN(['15,40', '15,45'])(04-12-2023).csv", "r") as f:
+#     title = f.readlines()
+# title.insert(0, "id,total,fistTime,lastTime\n")
+# title.append("1\n2\n3\n4\n5\n6")
+# with open("outputCSV/DATN(['15,40', '15,45'])(04-12-2023).csv", "w") as f:
+#     f.writelines(title)
 
-x = 10
-y = []
-rate = 0.01
+list = [1,2,3]
 
-for i in range(100):
-    x = x - rate*(2*x + 3)
-    y.append(x**2+3)
-
-plt.plot(y)
-plt.xlabel("so_lan")
-plt.ylabel("gia_tri")
-plt.title("gredient")
-
-plt.show()
-
-print(y[-1])
+print(('1' in list))
