@@ -2,10 +2,12 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-np.random.seed(47)
-img = cv2.imread('images/moon.jpg')
+# np.random.seed(47)
+img = cv2.imread('dog.jpg')
 img = cv2.resize(img, (200,200))
 img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)/255 # chuẩn hóa dữ liệu, hạ các giá trị của dữ liệu xuống để tránh overflow
+kernel = np.random.randn(3, 3)
+
 
 class conv2d():
     def __init__(self, input, kernelSize, padding=0, stride=1):
@@ -13,7 +15,7 @@ class conv2d():
         self.kernelSize = kernelSize
         self.input = np.pad(input, ((padding, padding), (padding, padding)), 'constant')
         self.height, self.width = input.shape
-        self.kernel = np.random.randn(kernelSize, kernelSize)
+        self.kernel = kernel
 
         self.result = np.zeros((int((self.height - self.kernelSize)/self.stride) + 1,
                                 int((self.width - self.kernelSize)/self.stride) + 1))
@@ -54,11 +56,11 @@ class leakyReLu:
         return self.result
 
 for i in range(1,10):
-    conv2d_instance = conv2d(img_gray, 3)
+    conv2d_instance = conv2d(img_gray, 3, stride=i)
     img_cnn_conv2d = conv2d_instance.operater()
     conv2d_relu_instance = ReLu(img_cnn_conv2d)
     img_conv2d_cnn_relu = conv2d_relu_instance.operate()
-
+    #
     plt.subplot(3,3,i)
     plt.imshow(img_conv2d_cnn_relu, cmap="gray")
     print("......",end="")

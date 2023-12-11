@@ -17,11 +17,24 @@ bucket = storage.bucket()
 
 
 def msg_box():
-    print(f"Selected item: {value_com_thu.get()},{value_com_h_in.get()},{value_com_h_out.get()}, "
-          f"{value_com_p_in.get()},{value_com_p_out.get()}{entry_u.get()}")
+
+    ref_lichhoc = db.reference(f'lap lich/{value_com_thu.get()}')
+    get = ref_lichhoc.get()
+    if get:
+        for gio in get:
+            gio = gio.split("-")
+            gio_bat_dau = round(float(gio[0].replace(",", ".")), 2)
+            gio_ket_thuc = round(float(gio[1].replace(",", ".")), 2)
+            print(gio_bat_dau <= float(f"{value_com_h_in.get()}.{value_com_p_in.get()}") <= gio_ket_thuc)
+            print((gio_bat_dau <= float(f"{value_com_h_out.get()}.{value_com_p_out.get()}") <= gio_ket_thuc))
+            # print(float(f"{value_com_h_in.get()}.{value_com_p_in.get()}"), float(f"{value_com_h_out.get()}.{value_com_p_out.get()}"))
+            if (gio_bat_dau <= float(f"{value_com_h_in.get()}.{value_com_p_in.get()}") <= gio_ket_thuc) or (gio_bat_dau <= float(f"{value_com_h_out.get()}.{value_com_p_out.get()}") <= gio_ket_thuc) :
+                messagebox.showinfo("thông báo!", "trùng lịch!")
+                return
+
     try:
         ref = db.reference(f'lap lich/{value_com_thu.get()}')
-        ref.child(f"{value_com_h_in.get()},{value_com_p_out.get()}-{value_com_h_out.get()},{value_com_p_out.get()}").set(f"{entry_u.get()}.txt")
+        ref.child(f"{value_com_h_in.get()},{value_com_p_in.get()}-{value_com_h_out.get()},{value_com_p_out.get()}").set(f"{entry_u.get()}.txt")
     except:
         messagebox.showwarning("thông báo!", "lỗi firbase!")
 
@@ -71,7 +84,8 @@ choices1 = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','1
 choices2 = ['00','01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24'
             ,'25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','43','44','45','46',
             '47','48','49','50','51','52','53','54','55','56','57','58','59','60']
-
+choices_file = ["DATN", "KTSX123","LTM1"]
+value_defound_file = "DATN"
 value_defound1 = '7'
 value_defound2 = '00'
 value_defound = "thu2"
@@ -79,13 +93,14 @@ value_defound = "thu2"
 entry_h=100
 value_com_thu = comboboxd(choices, value_defound, 50, entry_h)
 value_com_h_in = comboboxd(choices1, value_defound1, 200, entry_h)
+value_com_p_in = comboboxd(choices2, value_defound2, 350, entry_h)
+
 value_com_h_out = comboboxd(choices1, value_defound1, 200, entry_h+50)
-value_com_p_in = comboboxd(choices2, value_defound2, 350, entry_h+50)
-value_com_p_out = comboboxd(choices2, value_defound2, 350, entry_h)
+value_com_p_out = comboboxd(choices2, value_defound2, 350, entry_h+50)
 
 bnt = button("ok", 500, 140,10,2 ,msg_box)
 
-entry_u = entry(30, 500, entry_h)
+entry_u = comboboxd(choices_file, value_defound_file,500, entry_h)
 
 label_h = 70
 label("LAPLICH", 50, 30)
